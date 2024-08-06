@@ -1,14 +1,15 @@
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
+#include <string.h>
 
 typedef int BufferPosition;
 typedef uint8_t ASCII;
 const unsigned int DEBUG = 0;
 struct GapBuffer makeGapBuffer(int n_bytes);
 void shiftGapTo(struct GapBuffer buff, BufferPosition cursor);
+int bufferLength(struct GapBuffer b);
 int min(int a, int b);
+int max(int a, int b);
 
 struct GapBuffer {
   ASCII *buf;
@@ -35,19 +36,50 @@ struct GapBuffer makeGapBuffer(int n_bytes) {
   return b;
 }
 
-void shiftGapTo(struct GapBuffer g, BufferPosition cursor) {
-  int gap_len = g.gap_end - g.gap_start;
-  int buffLength = (int)sizeof(g.buf) / (int)sizeof(ASCII);
-  if (cursor == g.gap_start) {
+void shiftGapTo(struct GapBuffer b, BufferPosition cursor) {
+  int gap_len = b.gap_end - b.gap_start;
+  // int buffLength = (int)sizeof(b.buf) / (int)sizeof(ASCII);
+
+  cursor = min(cursor, bufferLength(b) - gap_len);
+  if (cursor == b.gap_start) {
     return;
   }
-  cursor = min(cursor, buffLength - gap_len);
+  // Gap is before cursor
+  if (b.gap_start < cursor) {
+    // delta is the distance between the cursor and the gap_start when cursor
+    // moved to late lines
+    unsigned long delta = cursor - b.gap_start;
+    memcpy(&b.buf[b.gap_start], &b.buf[b.gap_end], delta);
+    b.gap_start += delta;
+    b.gap_end += delta;
 
-  if (g.gap_start < cursor) {
-    // Gap is before cursor
-  } else if () {
     // Gap is after cursor
+  } else if (b.gap_start > cursor) {
+
+    unsigned long delta = b.gap_start - cursor;
+    memcpy(&b.buf[b.gap_end - delta], &b.buf[b.gap_start - delta], delta);
+    b.gap_start -= delta;
+    b.gap_end -= delta;
   }
 }
 
+void checkGapSize(struct GapBuffer b, int n_required) {
+  int gap_len = b.gap_end - b.gap_start;
+  // int buffLength = (int)sizeof(b.buf) / (int)sizeof(ASCII);
+
+  if (gap_len < n_required) {
+    shiftGapTo(b, bufferLength(b) - gap_len);
+    ASCII newBuf[max(2 * bufferLength(b),
+                     n_required + bufferLength(b) - gap_len)];
+    memcpy(newBuf, b.buf, bufferLength(b));
+    free(b.buf);
+    b.buf = newBuf;
+    b.gap_end = bufferLength(b);
+  }
+}
+
+int bufferLength(struct GapBuffer b) {
+  return (int)sizeof(b.buf) / (int)sizeof(typeof(b.buf));
+}
 int min(int a, int b) { return (a <= b) ? a : b; }
+int max(int a, int b) { return (a > b) ? a : b; }
