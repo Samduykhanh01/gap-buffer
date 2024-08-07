@@ -1,6 +1,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+// #include <sys/types.h>
+// #include <unistring/ustring.h>
+#include <unistr.h>
 
 typedef int BufferPosition;
 typedef uint8_t ASCII;
@@ -36,6 +39,7 @@ struct GapBuffer makeGapBuffer(int n_bytes) {
   return b;
 }
 
+// Gap mem copy
 void shiftGapTo(struct GapBuffer b, BufferPosition cursor) {
   int gap_len = b.gap_end - b.gap_start;
   // int buffLength = (int)sizeof(b.buf) / (int)sizeof(ASCII);
@@ -63,6 +67,7 @@ void shiftGapTo(struct GapBuffer b, BufferPosition cursor) {
   }
 }
 
+// Realocation on gap too small
 void checkGapSize(struct GapBuffer b, int n_required) {
   int gap_len = b.gap_end - b.gap_start;
   // int buffLength = (int)sizeof(b.buf) / (int)sizeof(ASCII);
@@ -76,6 +81,25 @@ void checkGapSize(struct GapBuffer b, int n_required) {
     b.buf = newBuf;
     b.gap_end = bufferLength(b);
   }
+}
+
+void insertChar(struct GapBuffer b, BufferPosition cursor, uint8_t c) {
+  checkGapSize(b, 1);
+  shiftGapTo(b, cursor);
+  b.buf[b.gap_start] = c;
+  b.gap_start += 1;
+}
+
+void insertUnicode(struct GapBuffer b, BufferPosition cursor, uint32_t *u) {
+  size_t n = (size_t)sizeof(u) / (size_t)sizeof(uint32_t);
+  uint8_t resultbuf[4 * n];
+  size_t lengthp;
+  uint8_t *converted = u32_to_u8(u, n, resultbuf, &lengthp);
+
+  checkGapSize(b, 1);
+  shiftGapTo(b, cursor);
+  b.buf[b.gap_start] = c;
+  b.gap_start += 1;
 }
 
 int bufferLength(struct GapBuffer b) {
