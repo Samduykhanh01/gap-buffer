@@ -86,6 +86,11 @@ void checkGapSize(struct GapBuffer b, int n_required) {
   }
 }
 
+void remove(struct GapBuffer b, BufferPosition cursor, int count) {
+  shiftGapTo(b, cursor);
+  b.gap_end += min(b.gap_end + count, bufferLength(b));
+}
+
 void insertChar(struct GapBuffer b, BufferPosition cursor, uint8_t c) {
   checkGapSize(b, 1);
   shiftGapTo(b, cursor);
